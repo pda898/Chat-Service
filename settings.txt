@@ -1,0 +1,11 @@
+POST /login ru.nsu.ccfit.Handlers.LoginHandler
+POST /register ru.nsu.ccfit.Handlers.RegisterHandler
+POST /logout ru.nsu.ccfit.Handlers.LogoutHandler
+GET /users ru.nsu.ccfit.Handlers.UserListHandler
+GET /users/{id} ru.nsu.ccfit.Handlers.UserInfoHandler
+POST /messages ru.nsu.ccfit.Handlers.MessageHandler
+GET /messages ru.nsu.ccfit.Handlers.MessageListHandler
+POST /files ru.nsu.ccfit.Handlers.FileUploadHandler
+GET /files ru.nsu.ccfit.Handlers.FileInfoHandler
+GET /files/{id}/{name} ru.nsu.ccfit.Handlers.FileDownloadHandler
+POST /files/{id}/{name} ru.nsu.ccfit.Handlers.FileDeleteHandler
