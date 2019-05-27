@@ -38,7 +38,7 @@ public class LoginHandler implements HttpHandler {
                 exchange.setStatusCode(200);
                 exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
                 exchange.getResponseHeaders().remove(Headers.WWW_AUTHENTICATE);
-                exchange.getResponseSender().send("{id:" + token.getId() + "\"token\":\"" + token.getToken() + "\"}");
+                exchange.getResponseSender().send("{id:" + token.getId() + ",\"token\":\"" + token.getToken() + "\"}");
             }
         } catch (NullPointerException e) {
             CommonHandlers.wrongFormatHandler(exchange);

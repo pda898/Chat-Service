@@ -15,6 +15,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -32,8 +33,9 @@ public class Client {
     }.getType();
     private Type storedFileType = new TypeToken<ArrayList<StoredFile>>() {
     }.getType();
+    private final Object messageSync = new Object();
     private Gson g = new Gson();
-    private int offset = 0;
+    private int offset = 1;
     private Timer updateTimer = new Timer(500, new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -43,7 +45,9 @@ public class Client {
     });
 
     public void setServer(String server) {
-        this.host = host;
+        this.host = server;
+        if (!this.host.startsWith("http://"))
+            this.host = "http://" + server;
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequestsPerHost(15);
         this.client = new OkHttpClient.Builder()
@@ -58,7 +62,7 @@ public class Client {
         HttpUrl route = HttpUrl.parse(host + "/register");
         Request request = new Request.Builder()
                 .url(route)
-                .post(RequestBody.create(MediaType.parse("application/json"), "{\"username\":\"" + username + "\",\"password\"" + password + "}"))
+                .post(RequestBody.create(MediaType.parse("application/json"), "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"))
                 .build();
         Response response = client.newCall(request).execute();
         if (response.code() != 200) {
@@ -72,7 +76,7 @@ public class Client {
         HttpUrl route = HttpUrl.parse(host + "/login");
         Request request = new Request.Builder()
                 .url(route)
-                .post(RequestBody.create(MediaType.parse("application/json"), "{\"username\":\"" + username + "\",\"password\"" + password + "}"))
+                .post(RequestBody.create(MediaType.parse("application/json"), "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"))
                 .build();
         Response response = client.newCall(request).execute();
         if (response.code() == 200) {
@@ -111,7 +115,6 @@ public class Client {
         try (Response response = client.newCall(request).execute()) {
             if (response.code() == 200) {
                 String body = response.body().string();
-                body = body.substring(body.indexOf('['), body.length() - 1);
                 users = g.fromJson(body, userListType);
             } else {
                 throw new IllegalArgumentException();
@@ -136,7 +139,7 @@ public class Client {
                 if (response.code() == 200) {
                     String body = response.body().string();
                     buffer = g.fromJson(body, messageListType);
-                    synchronized (messages) {
+                    synchronized (messageSync) {
                         messages.addAll(buffer);
                     }
                     offset += buffer.size();
@@ -156,7 +159,7 @@ public class Client {
 
     public List<Message> getMessages() throws IOException {
         ArrayList<Message> ret = new ArrayList<>(messages.size());
-        synchronized (messages) {
+        synchronized (messageSync) {
             ret.addAll(messages);
             messages.clear();
         }
@@ -168,7 +171,9 @@ public class Client {
         BufferedReader reader = new BufferedReader(new FileReader(file));
         StringBuilder fileContent = new StringBuilder();
         while (reader.ready()) {
-            fileContent.append(reader.readLine());
+            char[] buffer = new char[1024];
+            int size = reader.read(buffer);
+            fileContent.append(Arrays.copyOfRange(buffer, 0, size));
         }
         Request request = new Request.Builder()
                 .url(route)
@@ -190,8 +195,6 @@ public class Client {
 
     public List<StoredFile> getFiles() throws IOException {
         ArrayList<StoredFile> buffer = new ArrayList<>();
-        int i = 0;
-        while ((i == 0) || (buffer.size() != 0)) {
             buffer = new ArrayList<>();
             HttpUrl route = HttpUrl.parse(host + "/files");
             Request request = new Request.Builder()
@@ -206,11 +209,10 @@ public class Client {
                 } else {
                     throw new IllegalArgumentException();
                 }
-                i++;
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+
         return buffer;
     }
 
@@ -230,7 +232,7 @@ public class Client {
             throw new IllegalArgumentException();
         }
         response.close();
-
+        updateTimer.stop();
     }
 
     public String getHost() {

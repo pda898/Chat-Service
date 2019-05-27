@@ -136,6 +136,7 @@ public class MainWindow extends JFrame implements ActionListener {
             case "quit":
                 try {
                     client.disconnect();
+                    updateTimer.stop();
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, "There was a error during disconnecting, session can linger.");
                 }

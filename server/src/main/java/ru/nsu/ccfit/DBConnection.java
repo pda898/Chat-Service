@@ -3,30 +3,14 @@ package ru.nsu.ccfit;
 import java.io.File;
 import java.security.MessageDigest;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class DBConnection {
     private static final long TIMEOUT = 30 * 60 * 1000L;
     private Connection c = null;
     private MessageDigest digest;
 
-    public DBConnection() {
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-            Class.forName("org.postgresql.Driver");
-            c = DriverManager
-                    .getConnection("jdbc:postgresql://localhost:5432/chatservice",
-                            "postgres", "");
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println(e.getClass().getName() + ": " + e.getMessage());
-            System.exit(0);
-        }
-        System.out.println("Opened database successfully");
-    }
+    private static final String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     public void close() {
         try {
@@ -52,25 +36,8 @@ public class DBConnection {
         return null;
     }
 
-    public boolean checkUserPassword(String name, String password) {
-        String userPassword = getUserPassword(name);
-        return userPassword.equals(Arrays.toString(digest.digest(password.getBytes())));
-    }
-
-    public boolean createUser(String name, String password) {
-        if (getUserPassword(name) != null)
-            return false;
-        try (PreparedStatement statement = c.prepareStatement(
-                "INSERT INTO profiles (nickname, signature, password, \"isAdmin\") VALUES (?,'',?,FALSE);")) {
-            statement.setString(1, name);
-            statement.setString(2, Arrays.toString(digest.digest(password.getBytes())));
-            statement.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+    private static final String lower = upper.toLowerCase(Locale.ROOT);
+    private static final String digits = "0123456789";
 
     public LoginInfo loginUser(String name, String password) {
         if (!checkUserPassword(name, password))
@@ -134,9 +101,7 @@ public class DBConnection {
         return users;
     }
 
-    private String generateToken(String name) {
-        return UUID.nameUUIDFromBytes(name.getBytes()).toString();
-    }
+    private static final String alphanum = upper + lower + digits;
 
     public Integer checkToken(String token) {
         if (token == null) {
@@ -217,11 +182,59 @@ public class DBConnection {
         return result;
     }
 
+    public DBConnection(String dbAddress, String dbName, String dbUsername, String dbPassword) {
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+            Class.forName("org.postgresql.Driver");
+            c = DriverManager
+                    .getConnection("jdbc:postgresql://" + dbAddress + '/' + dbName,
+                            dbUsername, dbPassword);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println(e.getClass().getName() + ": " + e.getMessage());
+            System.exit(0);
+        }
+        System.out.println("Opened database successfully");
+    }
+
+    public boolean checkUserPassword(String name, String password) {
+        String userPassword = getUserPassword(name);
+        return userPassword.equals(new String(digest.digest(password.getBytes())));
+    }
+
+    public boolean createUser(String name, String password) {
+        if (getUserPassword(name) != null)
+            return false;
+        try (PreparedStatement statement = c.prepareStatement(
+                "INSERT INTO profiles (nickname, signature, password, \"isAdmin\") VALUES (?,'',?,FALSE);")) {
+            statement.setString(1, name);
+            statement.setString(2, new String(digest.digest(password.getBytes())));
+            statement.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private String generateToken(String name) {
+        return UUID.nameUUIDFromBytes((name + System.currentTimeMillis()).getBytes()).toString();
+    }
+
+    private String generateFilename() {
+        final Random random = new Random();
+        StringBuffer ret = new StringBuffer(20);
+        for (int i = 0; i < 20; i++) {
+            ret.append((char) random.nextInt(alphanum.length()));
+        }
+        return ret.toString();
+    }
+
     public File uploadFile(int uid, String originalName, int size, String desc) {
         try (PreparedStatement statement = c.prepareStatement("SELECT add_file(?,?,?,?,?);")) {
             statement.setInt(1, uid);
             statement.setString(2, originalName);
-            String filename = UUID.randomUUID().toString();
+            String filename = generateFilename();
             statement.setString(3, filename);
             statement.setInt(4, size);
             statement.setString(5, desc);
@@ -277,6 +290,8 @@ public class DBConnection {
             statement.setInt(1, uid);
             statement.setString(2, name);
             statement.executeUpdate();
+            File file = new File(System.getProperty("user.dir") + File.separator + "uploads" + File.separator + uid + File.separator + name);
+            file.delete();
         } catch (SQLException e) {
             e.printStackTrace();
         }

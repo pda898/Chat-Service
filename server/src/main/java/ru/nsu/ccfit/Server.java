@@ -5,14 +5,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.RoutingHandler;
 import ru.nsu.ccfit.Handlers.CommonHandlers;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Properties;
 
 public class Server {
-    private static DBConnection dbConnection = new DBConnection();
+    private static DBConnection dbConnection;
 
     private static RoutingHandler loadSettings(String path) {
         RoutingHandler routes = new RoutingHandler().setFallbackHandler(CommonHandlers::notFoundHandler)
@@ -36,15 +34,25 @@ public class Server {
     public static void main(String[] args) {
         String host = "localhost";
         int port = 8080;
-        if (args.length == 0) {
-            System.out.println("Usage [request file] <server address> <server port>");
+        if (args.length < 2) {
+            System.out.println("Usage [request file] [db settings file] <server address> <server port>");
             System.exit(0);
         }
-        if (args.length == 3) {
-            host = args[1];
-            port = Integer.valueOf(args[2]);
+        if (args.length == 4) {
+            host = args[2];
+            port = Integer.valueOf(args[3]);
         }
-
+        Properties dbSettings = new Properties();
+        try {
+            dbSettings.load(new FileReader(args[1]));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        dbConnection = new DBConnection(
+                dbSettings.getProperty("address", "127.0.0.1:5432"),
+                dbSettings.getProperty("database", "chatservice"),
+                dbSettings.getProperty("username", "postgres"),
+                dbSettings.getProperty("password", ""));
         RoutingHandler routes = loadSettings(args[0]);
         Undertow server = Undertow.builder().addHttpListener(port, host).setHandler(routes).build();
         server.start();

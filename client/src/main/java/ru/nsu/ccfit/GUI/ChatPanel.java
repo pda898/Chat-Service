@@ -52,11 +52,13 @@ public class ChatPanel extends JPanel implements ActionListener {
                     for (User user : users) {
                         chat.append(user.getUsername() + "\n");
                     }
+                } else {
+                    client.sendMessage(message.getText());
                 }
-                client.sendMessage(message.getText());
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(this, "Server Error");
             }
         }
+        message.setText("");
     }
 }

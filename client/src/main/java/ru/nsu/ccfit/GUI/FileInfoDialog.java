@@ -19,15 +19,21 @@ public class FileInfoDialog extends JDialog {
     }
 
     public void run(int uid, List<StoredFile> fileInfo, String hostname, Client client) {
-        this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
+        if (fileInfo.isEmpty()) {
+            JOptionPane.showMessageDialog(owner, "Upload files first");
+            return;
+        }
         for (StoredFile file : fileInfo) {
-            this.add(new JLabel("Name: " + file.getOriginalName()));
-            this.add(new JLabel("Desc: " + file.getDesc()));
-            this.add(new JLabel("Size: " + file.getSize()));
+            panel.add(new JLabel("Name: " + file.getOriginalName()));
+            panel.add(new JLabel("Desc: " + file.getDesc()));
+            panel.add(new JLabel("Size: " + file.getSize()));
             try {
-                URI uri = new URI("http://" + hostname + "/" + uid + "/" + file.getName());
+                URI uri = new URI(hostname + "/files/" + uid + "/" + file.getName());
                 JButton hyperlink = new JButton("<HTML><FONT color=\"#000099\"><U>" + uri.getPath() + "</U></FONT>\"</HTML>");
                 hyperlink.addActionListener(e -> open(uri));
+                panel.add(hyperlink);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -39,9 +45,14 @@ public class FileInfoDialog extends JDialog {
                     JOptionPane.showMessageDialog(owner, "Either file already deleted or not exist at all");
                 }
             });
-            this.add(delete);
-            this.add(Box.createRigidArea(new Dimension(5, 0)));
+            panel.add(delete);
+            panel.add(Box.createRigidArea(new Dimension(5, 0)));
         }
+        this.add(panel);
+        this.pack();
+        this.setMinimumSize(this.getPreferredSize());
+        this.setLocationRelativeTo(owner);
+        this.setVisible(true);
     }
 
     private void open(URI uri) {
