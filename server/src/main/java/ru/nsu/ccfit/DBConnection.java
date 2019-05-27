@@ -225,7 +225,7 @@ public class DBConnection {
         final Random random = new Random();
         StringBuffer ret = new StringBuffer(20);
         for (int i = 0; i < 20; i++) {
-            ret.append((char) random.nextInt(alphanum.length()));
+            ret.append(alphanum.charAt(random.nextInt(alphanum.length())));
         }
         return ret.toString();
     }
