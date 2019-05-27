@@ -6,5 +6,6 @@ Including:
 
 Requirements:
 1) PostgreSQL 11+
+2) Java 9.0+ (due to Kessak-3 hash function usage)
 2) PostgreSQL JDBC 4.2+ (should be in maven requirements but in case of jar file should be in the classpath)
 3) Setuped database (chatservice exist and sql script in root directory executed)
